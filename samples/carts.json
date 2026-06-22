@@ -1,0 +1,34 @@
+[
+  {
+    "_comment": "MONEY SHOT — Chicago combined rate 10.25% (state+county+city+RTA); Medusa's flat region rate only has 6.25%.",
+    "id": "cart_01",
+    "currency_code": "usd",
+    "shipping_address": { "province": "IL", "city": "Chicago" },
+    "items": [ { "title": "Standing desk", "unit_price": 200, "quantity": 1 } ],
+    "medusa_region_rate": 0.0625
+  },
+  {
+    "_comment": "Portland, OR — Oregon has NO sales tax; Medusa's flat 6% over-charges.",
+    "id": "cart_02",
+    "currency_code": "usd",
+    "shipping_address": { "province": "OR", "city": "Portland" },
+    "items": [ { "title": "Mechanical keyboard", "unit_price": 150, "quantity": 1 } ],
+    "medusa_region_rate": 0.06
+  },
+  {
+    "_comment": "Austin, TX — 8.25% combined, and Medusa happens to match. Correct.",
+    "id": "cart_03",
+    "currency_code": "usd",
+    "shipping_address": { "province": "TX", "city": "Austin" },
+    "items": [ { "title": "Monitor", "unit_price": 300, "quantity": 1 } ],
+    "medusa_region_rate": 0.0825
+  },
+  {
+    "_comment": "Los Angeles, CA — 9.5% combined; Medusa's 7.25% misses the local add-on.",
+    "id": "cart_04",
+    "currency_code": "usd",
+    "shipping_address": { "province": "CA", "city": "Los Angeles" },
+    "items": [ { "title": "Office chair", "unit_price": 500, "quantity": 1 } ],
+    "medusa_region_rate": 0.0725
+  }
+]

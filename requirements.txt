@@ -1,0 +1,2 @@
+# The demo runs on the Python standard library alone (urllib + json).
+# Set OA_MCP_TOKEN to use the live verified rates.

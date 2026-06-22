@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="608" viewBox="0 0 1040 608" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14">
+<rect width="1040" height="608" rx="10" fill="#0d1117"/>
+<circle cx="20" cy="18" r="6" fill="#ff5f56"/>
+<circle cx="40" cy="18" r="6" fill="#ffbd2e"/>
+<circle cx="60" cy="18" r="6" fill="#27c93f"/>
+<text x="24" y="40" xml:space="preserve" fill="#58a6ff">Medusa → OpenAccountants · tax-provider demo  [MOCK (set OA_MCP_TOKEN to use the live verified rates)]</text>
+<text x="24" y="84" xml:space="preserve" fill="#e6edf3">🛒  cart cart_01 → Chicago, IL · USD 200</text>
+<text x="24" y="106" xml:space="preserve" fill="#39c5cf">    OpenAccountants → US destination sales-tax rates (state + local)  (tier 1, signed off by Amir Pelinkovic (US lead))</text>
+<text x="24" y="128" xml:space="preserve" fill="#39c5cf">    Medusa flat: 6.25% (USD 12.50)   ·   OpenAccountants: 10.25% (USD 20.50)</text>
+<text x="24" y="150" xml:space="preserve" fill="#d29922">    ⚠️  Under-charging — Medusa 6.25%, correct 10.25%</text>
+<text x="24" y="172" xml:space="preserve" fill="#c9d1d9">       IL/Chicago combined rate. Medusa's flat region rate misses local tax — USD 8.00 short (your liability to remit).</text>
+<text x="24" y="216" xml:space="preserve" fill="#e6edf3">🛒  cart cart_02 → Portland, OR · USD 150</text>
+<text x="24" y="238" xml:space="preserve" fill="#39c5cf">    OpenAccountants → US destination sales-tax rates (state + local)  (tier 1, signed off by Amir Pelinkovic (US lead))</text>
+<text x="24" y="260" xml:space="preserve" fill="#39c5cf">    Medusa flat: 6.00% (USD 9.00)   ·   OpenAccountants: 0.00% (USD 0.00)</text>
+<text x="24" y="282" xml:space="preserve" fill="#d29922">    ⚠️  Over-charging — Medusa 6.00%, correct 0.00%</text>
+<text x="24" y="304" xml:space="preserve" fill="#c9d1d9">       OR has no state sales tax. Medusa's flat region rate over-collects — USD 9.00 the customer shouldn't be charged.</text>
+<text x="24" y="348" xml:space="preserve" fill="#e6edf3">🛒  cart cart_03 → Austin, TX · USD 300</text>
+<text x="24" y="370" xml:space="preserve" fill="#39c5cf">    OpenAccountants → US destination sales-tax rates (state + local)  (tier 1, signed off by Amir Pelinkovic (US lead))</text>
+<text x="24" y="392" xml:space="preserve" fill="#39c5cf">    Medusa flat: 8.25% (USD 24.75)   ·   OpenAccountants: 8.25% (USD 24.75)</text>
+<text x="24" y="414" xml:space="preserve" fill="#3fb950">    ✅ Correct — 8.25% (TX/Austin combined rate)</text>
+<text x="24" y="436" xml:space="preserve" fill="#c9d1d9">       Medusa and OpenAccountants agree: USD 24.75 on USD 300.</text>
+<text x="24" y="480" xml:space="preserve" fill="#e6edf3">🛒  cart cart_04 → Los Angeles, CA · USD 500</text>
+<text x="24" y="502" xml:space="preserve" fill="#39c5cf">    OpenAccountants → US destination sales-tax rates (state + local)  (tier 1, signed off by Amir Pelinkovic (US lead))</text>
+<text x="24" y="524" xml:space="preserve" fill="#39c5cf">    Medusa flat: 7.25% (USD 36.25)   ·   OpenAccountants: 9.50% (USD 47.50)</text>
+<text x="24" y="546" xml:space="preserve" fill="#d29922">    ⚠️  Under-charging — Medusa 7.25%, correct 9.50%</text>
+<text x="24" y="568" xml:space="preserve" fill="#c9d1d9">       CA/Los Angeles combined rate. Medusa's flat region rate misses local tax — USD 11.25 short (your liability to remit).</text>
+</svg>
