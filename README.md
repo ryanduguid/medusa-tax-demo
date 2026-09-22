@@ -33,7 +33,7 @@ Four carts priced by Medusa's flat region rate vs OpenAccountants:
 | **Chicago, IL** | 6.25% | **10.25%** | ⚠️ under-charging local tax |
 | Portland, OR | 6.00% | **0.00%** | ⚠️ over-charging (no sales tax) |
 | Austin, TX | 8.25% | 8.25% | ✅ correct |
-| **Los Angeles, CA** | 7.25% | **9.50%** | ⚠️ under-charging local tax |
+| **Los Angeles, CA** | 7.25% | **9.75%** | ⚠️ under-charging local tax |
 
 **The money shot:** the Chicago cart. The combined rate is **10.25%** (Illinois + Cook County + Chicago + RTA), but a single flat "US region" rate only carries 6.25% — so the store **under-collects local tax it's still liable to remit.** And Portland shows the opposite error: Oregon has no sales tax at all, so the flat rate **over-charges the customer.** Destination-correct rates fix both.
 
@@ -70,3 +70,7 @@ To wire it into a real Medusa store, this becomes a Tax Module Provider whose
 
 - `tax_provider.py` does **rate lookup + nexus signal**, not product taxability, exemptions, or marketplace-facilitator rules. Production leans on the full OA skill + an agent step; the named-CPA sign-off makes the rate relianceable.
 - Rates (Chicago 10.25%, LA 9.5%, Austin 8.25%, OR 0%) are real combined figures; live, every value comes from `get_skill`. The verifier (Amir Pelinkovic) is the real OpenAccountants US lead.
+
+The Los Angeles sample uses the **City of Los Angeles** rate of 9.75% in the [CDTFA city and county table effective 1 July 2026](https://cdtfa.ca.gov/taxes-and-fees/rates.aspx). It is not a rate for every destination in Los Angeles County. Confirm the address and transaction date before using a rate for another sale.
+
+Run the offline checks with `python -m unittest discover -s tests -v`.

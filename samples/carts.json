@@ -24,7 +24,7 @@
     "medusa_region_rate": 0.0825
   },
   {
-    "_comment": "Los Angeles, CA — 9.5% combined; Medusa's 7.25% misses the local add-on.",
+    "_comment": "City of Los Angeles, CA, 1 July 2026 rate table: 9.75% combined; Medusa's 7.25% misses the local add-on.",
     "id": "cart_04",
     "currency_code": "usd",
     "shipping_address": { "province": "CA", "city": "Los Angeles" },

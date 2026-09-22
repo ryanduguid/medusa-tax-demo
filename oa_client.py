@@ -78,7 +78,7 @@ _MOCK_SKILL = {
             # region rates can't do. Illustrative; production reads these from the skill.
             "combined_rates": {
                 "IL/Chicago": 0.1025,
-                "CA/Los Angeles": 0.095,
+                "CA/Los Angeles": 0.0975,  # City rate in CDTFA table effective 1 July 2026
                 "TX/Austin": 0.0825,
                 "OR/Portland": 0.0,
             },
