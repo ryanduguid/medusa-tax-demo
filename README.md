@@ -69,7 +69,7 @@ To wire it into a real Medusa store, this becomes a Tax Module Provider whose
 ## Honest notes
 
 - `tax_provider.py` does **rate lookup + nexus signal**, not product taxability, exemptions, or marketplace-facilitator rules. Production leans on the full OA skill + an agent step; the named-CPA sign-off makes the rate relianceable.
-- Rates (Chicago 10.25%, LA 9.5%, Austin 8.25%, OR 0%) are real combined figures; live, every value comes from `get_skill`. The verifier (Amir Pelinkovic) is the real OpenAccountants US lead.
+- Rates (Chicago 10.25%, Los Angeles city 9.75%, Austin 8.25%, OR 0%) are real combined figures; live, every value comes from `get_skill`. The verifier (Amir Pelinkovic) is the real OpenAccountants US lead.
 
 The Los Angeles sample uses the **City of Los Angeles** rate of 9.75% in the [CDTFA city and county table effective 1 July 2026](https://cdtfa.ca.gov/taxes-and-fees/rates.aspx). It is not a rate for every destination in Los Angeles County. Confirm the address and transaction date before using a rate for another sale.
 
