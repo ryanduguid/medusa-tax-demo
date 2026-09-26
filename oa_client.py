@@ -8,17 +8,16 @@ from __future__ import annotations
 
 from copy import deepcopy
 from decimal import Decimal, InvalidOperation
+from http.client import HTTPException
 import json
 import os
 import urllib.request
 import urllib.error
 
+from json_contract import reject_json_constant, unique_object
+
 MCP_URL = os.environ.get("OA_MCP_URL", "https://www.openaccountants.com/api/mcp")
 MCP_TOKEN = os.environ.get("OA_MCP_TOKEN")
-
-
-def reject_json_constant(value):
-    raise ValueError("non-standard JSON numeric constant")
 
 
 class OAClient:
@@ -53,9 +52,14 @@ class OAClient:
         req = urllib.request.Request(self.url, data=body, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                payload = json.load(resp, parse_float=Decimal, parse_constant=reject_json_constant)
+                payload = json.load(
+                    resp, parse_float=Decimal, parse_constant=reject_json_constant,
+                    object_pairs_hook=unique_object,
+                )
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal in OA response") from error
+        except HTTPException as error:
+            raise RuntimeError("OA MCP HTTP response was incomplete or invalid") from error
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"OA MCP HTTP {e.code}") from e
         if not isinstance(payload, dict):
@@ -81,7 +85,10 @@ class OAClient:
         if content[0].get("type") != "text" or not isinstance(content[0].get("text"), str):
             raise ValueError("OA MCP content must contain a text string")
         try:
-            return json.loads(content[0]["text"], parse_float=Decimal, parse_constant=reject_json_constant)
+            return json.loads(
+                content[0]["text"], parse_float=Decimal, parse_constant=reject_json_constant,
+                object_pairs_hook=unique_object,
+            )
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal in OA response") from error
 

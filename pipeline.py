@@ -8,6 +8,7 @@ import sys
 import medusa_client
 import tax_provider
 from oa_client import OAClient
+from reporting import configure_output, safe_text
 
 STATUS = {"ok": "✅", "warn": "⚠️", "incomplete": "⚠️"}
 
@@ -28,25 +29,26 @@ def run(source: str, oa: OAClient) -> bool:
             c = medusa_client.normalize(cart)
             v = tax_provider.check(c, skill)
         except ValueError as error:
-            print(f"\nCart {index}: invalid input: {error}")
+            print(f"\nCart {index}: invalid input: {safe_text(error)}")
             complete = False
             continue
-        print(f"\n🛒  cart {c['id']} → {c['city'] or 'unknown city'}, {c['state'] or 'unknown state'}")
+        print(f"\n🛒  cart {safe_text(c['id'])} → {safe_text(c['city'] or 'unknown city')}, {safe_text(c['state'] or 'unknown state')}")
         trust = ("unverified sample rules" if v["provenance"] == "sample"
                  else "provider metadata; not independently verified")
-        print(f"    OpenAccountants → {v.get('oa_skill_name') or 'sales-tax rates'} ({trust})")
+        print(f"    OpenAccountants → {safe_text(v.get('oa_skill_name') or 'sales-tax rates')} ({trust})")
         for label, rate_key, tax_key in (("Medusa flat", "medusa_rate", "medusa_tax"),
                                          ("Illustrative", "oa_rate", "oa_tax")):
             rate_text = "unknown" if v[rate_key] is None else f"{v[rate_key]:.4%}"
             tax_text = "unknown" if v[tax_key] is None else f"USD {v[tax_key]:,.2f}"
             print(f"    {label}: {rate_text} ({tax_text})")
-        print(f"    {STATUS[v['status']]} {v['headline']}")
-        print(f"       {v['detail']}")
+        print(f"    {STATUS[v['status']]} {safe_text(v['headline'])}")
+        print(f"       {safe_text(v['detail'])}")
         complete = complete and v["complete"]
     return complete
 
 
 def main(argv: list[str]) -> int:
+    configure_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", nargs="?", default=str(Path(__file__).parent / "samples/carts.json"))
     parser.add_argument("--live", action="store_true", help="use the unverified live adapter")
@@ -59,7 +61,7 @@ def main(argv: list[str]) -> int:
     try:
         complete = run(args.source, oa)
     except (OSError, ValueError, RuntimeError) as error:
-        print(f"Comparison failed: {error}", file=sys.stderr)
+        print(f"Comparison failed: {safe_text(error)}", file=sys.stderr)
         return 2
     return 0 if complete else 2
 

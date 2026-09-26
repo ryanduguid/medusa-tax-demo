@@ -78,6 +78,11 @@ Unsupported schemas, units and semantic fields leave the comparison incomplete.
 Provider metadata remains reported information, not independent verification.
 Bundled rules have no verifier or professional sign-off.
 
+JSON inputs and provider responses reject duplicate object properties and
+non-standard numeric constants instead of silently choosing a value.
+Control characters in supplied text appear as visible escapes. Redirected
+output tolerates encodings that cannot represent the display symbols.
+
 ## Files
 
 | File | Role |
@@ -88,4 +93,6 @@ Bundled rules have no verifier or professional sign-off.
 | `tax_provider.py` | Explicit rate coverage and decimal comparison |
 | `values.py` | Shared numeric validation within this demo |
 | `samples/carts.json` | Four fabricated carts |
+| `reporting.py` | Visible control-character escapes and portable output |
+| `json_contract.py` | JSON object and numeric-token validation |
 | `tests/` | Offline calculations, input validation and adapter regressions |

@@ -1,19 +1,20 @@
 """Read simplified cart JSON with USD unit prices and fractional region rates."""
 
-import json
 from decimal import Decimal, InvalidOperation, localcontext
+import json
+
+from json_contract import reject_json_constant, unique_object
 
 from values import number, rate
-
-
-def reject_json_constant(value):
-    raise ValueError("non-standard JSON numeric constant")
 
 
 def extract(source: str) -> list[dict]:
     with open(source, encoding="utf-8") as fh:
         try:
-            data = json.load(fh, parse_float=Decimal, parse_constant=reject_json_constant)
+            data = json.load(
+                fh, parse_float=Decimal, parse_constant=reject_json_constant,
+                object_pairs_hook=unique_object,
+            )
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal") from error
     if data == []:
