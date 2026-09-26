@@ -7,7 +7,7 @@ Provider metadata is reported without independent attestation.
 from __future__ import annotations
 
 from copy import deepcopy
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import json
 import os
 import urllib.request
@@ -50,6 +50,8 @@ class OAClient:
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 payload = json.load(resp, parse_float=Decimal)
+        except InvalidOperation as error:
+            raise ValueError("invalid JSON decimal literal in OA response") from error
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"OA MCP HTTP {e.code}") from e
         if not isinstance(payload, dict):
@@ -74,7 +76,10 @@ class OAClient:
             raise ValueError("OA MCP content must contain a text object")
         if content[0].get("type") != "text" or not isinstance(content[0].get("text"), str):
             raise ValueError("OA MCP content must contain a text string")
-        return json.loads(content[0]["text"], parse_float=Decimal)
+        try:
+            return json.loads(content[0]["text"], parse_float=Decimal)
+        except InvalidOperation as error:
+            raise ValueError("invalid JSON decimal literal in OA response") from error
 
 
 # Bundled illustrative responses have no professional attestation.

@@ -29,6 +29,16 @@ class AdapterTests(unittest.TestCase):
                     self.assertIsInstance(result["value"], Decimal)
                     self.assertEqual(result["value"], Decimal(value))
 
+    def test_unrepresentable_decimal_tokens_fail_at_both_boundaries(self):
+        skill = '{"value":1e999999999999999999999}'
+        responses = [
+            '{"jsonrpc":"2.0","id":1,"result":{"structuredContent":' + skill + '}}',
+            json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": skill}]}}),
+        ]
+        for payload in responses:
+            with self.subTest(payload=payload), self.assertRaisesRegex(ValueError, "invalid JSON decimal"):
+                self.call(payload)
+
     def test_tool_errors_do_not_supply_successful_data(self):
         payload = {"jsonrpc": "2.0", "id": 1, "result": {"isError": True, "structuredContent": {"value": 0}}}
         with self.assertRaisesRegex(RuntimeError, "tool returned an error"):

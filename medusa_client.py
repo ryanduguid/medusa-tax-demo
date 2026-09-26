@@ -1,14 +1,19 @@
 """Read simplified cart JSON with USD unit prices and fractional region rates."""
 
 import json
-from decimal import Decimal, localcontext
+from decimal import Decimal, InvalidOperation, localcontext
 
 from values import number, rate
 
 
 def extract(source: str) -> list[dict]:
     with open(source, encoding="utf-8") as fh:
-        data = json.load(fh, parse_float=Decimal)
+        try:
+            data = json.load(fh, parse_float=Decimal)
+        except InvalidOperation as error:
+            raise ValueError("invalid JSON decimal literal") from error
+    if data == []:
+        raise ValueError("input must contain at least one record")
     return data if isinstance(data, list) else [data]
 
 

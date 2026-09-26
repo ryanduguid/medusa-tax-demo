@@ -19,9 +19,9 @@ python make_svg.py
 ```
 
 The default command and SVG generator always use bundled sample rules.
-Incomplete comparisons and invalid inputs return exit code 2; complete sample
-comparisons return 0. The generator checks the command result before replacing
-the visual.
+Empty inputs, incomplete comparisons and invalid inputs return exit code 2;
+complete sample comparisons return 0. The generator checks the command result
+before replacing the visual.
 
 ## What the comparison covers
 
