@@ -1,60 +1,75 @@
-"""Compute the correct destination sales tax for a Medusa cart, and contrast it
-with the flat region rate Medusa would otherwise apply.
+"""Compare a supplied region rate with an explicitly covered illustrative rate.
 
-The gap Medusa documents: a single region can't carry the right rate for every US
-destination (state + county + city vary), and it doesn't know nexus. OpenAccountants
-returns the destination-correct rate — including 0% in no-sales-tax states and 0%
-where the seller has no nexus.
-
-DELIBERATE SCOPE: rate lookup + nexus signal, not product taxability, exemptions,
-or marketplace-facilitator rules. Production leans on the full OA skill + an agent
-step; the named-CPA sign-off makes it relianceable.
+The comparison assumes the entire subtotal is taxable. It does not determine
+product taxability, nexus, exemptions, collection duties or a complete tax bill.
 """
 
-from __future__ import annotations
+from decimal import Decimal, ROUND_HALF_UP, localcontext
+
+from values import number, rate
 
 
 def rate_for(cart: dict, oa_skill: dict) -> dict:
     rules = oa_skill.get("rules", {})
+    if (not isinstance(rules, dict) or rules.get("schema") != "illustrative-rates-v1"
+            or rules.get("rate_unit") != "fraction"):
+        return {"oa_rate": None, "why": "unsupported rule schema or rate units"}
+    allowed = {"schema", "rate_unit", "snapshot", "combined_rates", "state_base",
+               "nexus_states", "no_tax_states", "sources", "description"}
+    if rules.keys() - allowed:
+        return {"oa_rate": None, "why": "unsupported rule fields"}
     combined = rules.get("combined_rates", {})
-    state_base = rules.get("state_base", {})
-    no_tax = rules.get("no_tax_states", [])
-    nexus = rules.get("nexus_states", [])
-    state, city = cart["state"], cart["city"]
-
-    if state in no_tax:
-        oa_rate, why = 0.0, f"{state} has no state sales tax"
-    elif nexus and state not in nexus:
-        oa_rate, why = 0.0, f"no nexus in {state} — no obligation to collect"
-    else:
-        oa_rate = combined.get(f"{state}/{city}", state_base.get(state, 0.0))
-        why = f"{state}/{city} combined rate" if f"{state}/{city}" in combined else f"{state} state rate"
-    return {"oa_rate": oa_rate, "why": why}
+    if not isinstance(combined, dict):
+        raise ValueError("combined_rates must map destinations to fractional rates")
+    state, city = cart.get("state"), cart.get("city")
+    key = f"{state}/{city}"
+    if state and city and key in combined:
+        result = rate(combined[key], f"rate for {key}")
+        if result is not None:
+            return {"oa_rate": result, "why": f"{key} illustrative destination rate"}
+    return {"oa_rate": None, "why": "destination rate is not covered by the loaded sample"}
 
 
 def check(cart: dict, oa_skill: dict) -> dict:
-    base = {"oa_skill": oa_skill.get("slug"), "oa_skill_name": oa_skill.get("name"),
-            "tier": oa_skill.get("tier"), "verifier": oa_skill.get("verifier")}
     r = rate_for(cart, oa_skill)
-    oa_rate = r["oa_rate"]
-    medusa = cart["medusa_region_rate"]
-    sub = cart["subtotal"]
-    oa_tax = round(oa_rate * sub, 2)
-    medusa_tax = round(medusa * sub, 2)
-    delta = round(oa_tax - medusa_tax, 2)
-    cur = cart["currency"]
-
-    common = {**base, "oa_rate": oa_rate, "medusa_rate": medusa, "oa_tax": oa_tax,
-              "medusa_tax": medusa_tax, "why": r["why"]}
-
-    if abs(oa_rate - medusa) < 0.0005:
-        return {**common, "status": "ok",
-                "headline": f"Correct — {oa_rate:.2%} ({r['why']})",
-                "detail": f"Medusa and OpenAccountants agree: {cur} {oa_tax:,.2f} on {cur} {sub:,.0f}."}
-    if oa_rate > medusa:
-        return {**common, "status": "warn",
-                "headline": f"Under-charging — Medusa {medusa:.2%}, correct {oa_rate:.2%}",
-                "detail": f"{r['why']}. Medusa's flat region rate misses local tax — {cur} {delta:,.2f} short (your liability to remit)."}
-    return {**common, "status": "warn",
-            "headline": f"Over-charging — Medusa {medusa:.2%}, correct {oa_rate:.2%}",
-            "detail": f"{r['why']}. Medusa's flat region rate over-collects — {cur} {-delta:,.2f} the customer shouldn't be charged."}
+    sample_rate = r["oa_rate"]
+    region_rate = rate(cart.get("medusa_region_rate"), "medusa_region_rate")
+    subtotal = number(cart.get("subtotal"), "subtotal")
+    currency = cart.get("currency")
+    base = {
+        "oa_skill": oa_skill.get("slug"), "oa_skill_name": oa_skill.get("name"),
+        "provenance": oa_skill.get("provenance", "unverified"),
+        "reported_metadata": {key: oa_skill.get(key) for key in ("tier", "verifier", "source")},
+        "oa_rate": sample_rate, "medusa_rate": region_rate, "why": r["why"],
+        "oa_tax": None, "medusa_tax": None, "delta": None, "complete": False,
+    }
+    with localcontext() as context:
+        context.prec = 50
+        if currency == "USD" and subtotal is not None:
+            for key, value in (("oa_tax", sample_rate), ("medusa_tax", region_rate)):
+                if value is not None:
+                    base[key] = (subtotal * value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if base["oa_tax"] is not None and base["medusa_tax"] is not None:
+            base["delta"] = base["oa_tax"] - base["medusa_tax"]
+    missing = []
+    if sample_rate is None:
+        missing.append(r["why"])
+    if region_rate is None:
+        missing.append("region rate is missing")
+    if subtotal is None:
+        missing.append("subtotal is missing")
+    if currency != "USD":
+        missing.append("only explicit USD inputs are supported")
+    if missing:
+        return {**base, "status": "incomplete", "headline": "Comparison incomplete",
+                "detail": "; ".join(missing) + ". No collection obligation is determined."}
+    delta = base["delta"]
+    relation = "matches" if sample_rate == region_rate else (
+        "is lower than" if region_rate < sample_rate else "is higher than")
+    detail = f"Illustrative tax difference: USD {delta:,.2f}. Assumes the entire subtotal is taxable."
+    if sample_rate != region_rate and delta == 0:
+        detail += " The rates differ but give the same rounded amount."
+    return {**base, "complete": True, "delta": delta,
+            "status": "ok" if sample_rate == region_rate else "warn",
+            "headline": f"Region rate {relation} the illustrative rate ({sample_rate:.2%})",
+            "detail": detail}

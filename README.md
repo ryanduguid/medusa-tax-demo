@@ -1,72 +1,91 @@
-# Medusa → OpenAccountants: tax-provider demo
+# Medusa → OpenAccountants: illustrative rate comparison
 
-**The pitch in one line:** Medusa is open-source commerce whose own docs say its tax engine "won't work for the US or varying rates within the same region." OpenAccountants is the **drop-in tax provider** that returns the destination-correct rate — state + local — signed off by a named licensed accountant.
+Compare a supplied region rate with a small table of illustrative destination
+rates. The Python example reads simplified cart JSON and prints the difference.
+It is not a Medusa Tax Module Provider and does not determine the tax a seller
+must collect.
 
-```
-Medusa cart (items + shipping address)
-  └─ POST /store/carts/:id/taxes  →  OpenAccountants tax provider
-        └─ OA MCP: load the verified US destination rates
-              └─ Verdict:  ⚠️ under-charging — flat region rate misses local tax   ← the catch
-                           ⚠️ over-charging — no sales tax in this state
-                           ✅ correct destination rate
-                 · Medusa flat rate vs OA rate, side by side
-                 · the named CPA who signed off the rates
-```
-
-![Medusa → OpenAccountants demo](demo.svg)
-
-> Regenerate the visual: `python make_svg.py` (static SVG, no deps) · animated GIF: `brew install vhs && vhs demo.tape`
-
-## Why this one
-
-This is a **real integration target, not just a demo**: Medusa ([`medusajs/medusa`](https://github.com/medusajs/medusa), ~34k★, MIT) has a clean tax-provider seam, and its [docs explicitly state](https://docs.medusajs.com/) the built-in calculation "will not work for the US or other countries with varying rates within the same region." OpenAccountants slots straight into that seam and fills the gap they've documented.
-
-- **Medusa = the store, the cart, the checkout.**
-- **OpenAccountants = the tax provider** — destination-correct state + local rates, no-tax states, and nexus awareness, with verified rules a real accountant signed off on.
-
-## What it shows
-
-Four carts priced by Medusa's flat region rate vs OpenAccountants:
-
-| Ship to | Medusa flat | OpenAccountants | |
-|---|---|---|---|
-| **Chicago, IL** | 6.25% | **10.25%** | ⚠️ under-charging local tax |
-| Portland, OR | 6.00% | **0.00%** | ⚠️ over-charging (no sales tax) |
-| Austin, TX | 8.25% | 8.25% | ✅ correct |
-| **Los Angeles, CA** | 7.25% | **9.50%** | ⚠️ under-charging local tax |
-
-**The money shot:** the Chicago cart. The combined rate is **10.25%** (Illinois + Cook County + Chicago + RTA), but a single flat "US region" rate only carries 6.25% — so the store **under-collects local tax it's still liable to remit.** And Portland shows the opposite error: Oregon has no sales tax at all, so the flat rate **over-charges the customer.** Destination-correct rates fix both.
+![Illustrative rate comparison](demo.svg)
 
 ## Run it
 
-```bash
-git clone https://github.com/openaccountants/medusa-tax-demo
-cd medusa-tax-demo
-python pipeline.py                  # bundled sample carts (mock mode, no keys)
-python pipeline.py samples/carts.json
-```
-
-### Go live
+Python 3.10 or later and the standard library are sufficient.
 
 ```bash
-export OA_MCP_TOKEN=...     # OpenAccountants account token (uses the live verified rates)
 python pipeline.py
+python pipeline.py samples/carts.json
+python -m unittest discover -s tests -v
+python make_svg.py
 ```
 
-To wire it into a real Medusa store, this becomes a Tax Module Provider whose
-`getTaxLines` calls OpenAccountants — same logic as `tax_provider.py`.
+The default command and SVG generator always use bundled sample rules.
+Incomplete comparisons and invalid inputs return exit code 2; complete sample
+comparisons return 0. The generator checks the command result before replacing
+the visual.
+
+## What the comparison covers
+
+| Destination | Supplied region rate | Illustrative rate |
+|---|---|---|
+| Chicago, IL | 6.25% | 10.25% |
+| Portland, OR | 6.00% | 0.00% |
+| Austin, TX | 8.25% | 8.25% |
+| Los Angeles, CA | 7.25% | 9.75% |
+
+These are sample inputs, not a current-rate service. The Los Angeles entry uses
+the [CDTFA table effective 1 July 2026](https://cdtfa.ca.gov/taxes-and-fees/rates.aspx),
+checked on 26 September 2026. Recheck the applicable rate and effective date
+before using any figure outside this example.
+
+Only an explicit state/city entry supplies a complete illustrative rate.
+An unknown destination, a state-only rate or an absent nexus entry cannot
+establish zero tax. Alaska illustrates why: it has no statewide sales tax but
+[local sales taxes can apply](https://www.commerce.alaska.gov/web/dcra/OfficeoftheStateAssessor/AlaskaSalesTaxInformation.aspx).
+
+The calculation assumes that every item in the supplied subtotal is taxable.
+It excludes product taxability, exemptions, shipping, fees, marketplace rules,
+address resolution, nexus and collection obligations. Results say whether the
+region rate matches, exceeds or falls below the sample rate. They do not label
+a customer charge legally correct or incorrect.
+
+## Input contract
+
+This is a simplified JSON format, not a verified Medusa API payload:
+
+- `items` contains explicit `unit_price` values in USD and whole-number
+  `quantity` values. An empty array means an explicit zero subtotal.
+- `currency_code` must explicitly be `usd`; no currency conversion is performed.
+- `medusa_region_rate` is a fraction, such as `0.0625` for 6.25%.
+- `shipping_address.province` and `shipping_address.city` identify a sample entry.
+- Missing numbers remain unknown. Boolean, negative and non-finite numbers are
+  rejected. Numeric JSON values or decimal strings may have at most six decimal
+  places and values up to `1e12`. Rates must be between zero and one.
+
+Calculations use decimal arithmetic with 50 digits of precision. The demo
+rounds tax to cents using half-up rounding; this is an explicit example policy,
+not a claim about every jurisdiction's rounding rules.
+
+## Optional live adapter
+
+`python pipeline.py --live` opts into the experimental JSON-RPC adapter and
+requires `OA_MCP_TOKEN` to be configured outside the repository. Its live
+authentication and response contract have not been verified. It never falls
+back to sample rules after a failed live call.
+
+The checker accepts only `rules.schema = "illustrative-rates-v1"` with
+`rate_unit = "fraction"` and an explicit `combined_rates` destination map.
+Unsupported schemas, units and semantic fields leave the comparison incomplete.
+Provider metadata remains reported information, not independent verification.
+Bundled rules have no verifier or professional sign-off.
 
 ## Files
 
 | File | Role |
-|------|------|
-| `pipeline.py` | Orchestrator + CLI: carts → OA → verdict report |
-| `medusa_client.py` | Normalizes Medusa carts |
-| `oa_client.py` | OpenAccountants MCP JSON-RPC client (live or mock) |
-| `tax_provider.py` | The destination rate lookup + Medusa-vs-OA contrast |
-| `samples/carts.json` | Medusa-shaped carts |
-
-## Honest notes
-
-- `tax_provider.py` does **rate lookup + nexus signal**, not product taxability, exemptions, or marketplace-facilitator rules. Production leans on the full OA skill + an agent step; the named-CPA sign-off makes the rate relianceable.
-- Rates (Chicago 10.25%, LA 9.5%, Austin 8.25%, OR 0%) are real combined figures; live, every value comes from `get_skill`. The verifier (Amir Pelinkovic) is the real OpenAccountants US lead.
+|---|---|
+| `pipeline.py` | CLI and complete, incomplete or invalid result reporting |
+| `medusa_client.py` | Simplified cart JSON extraction and validation |
+| `oa_client.py` | Bundled examples and the experimental live adapter |
+| `tax_provider.py` | Explicit rate coverage and decimal comparison |
+| `values.py` | Shared numeric validation within this demo |
+| `samples/carts.json` | Four fabricated carts |
+| `tests/` | Offline calculations, input validation and adapter regressions |

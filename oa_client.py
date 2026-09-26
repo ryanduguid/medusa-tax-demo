@@ -1,15 +1,13 @@
-"""OpenAccountants MCP client.
+"""Illustrative rules and an experimental OpenAccountants JSON-RPC adapter.
 
-JSON-RPC 2.0 to https://www.openaccountants.com/api/mcp. The MCP requires auth on
-tool calls (OA_MCP_TOKEN) for live mode; without one it returns bundled sample
-responses that mirror the live shape so the demo runs end to end.
-
-  - start(intent, jurisdiction)  -> which verified skill governs the question
-  - get_skill(slug)              -> the destination sales-tax rates + named verifier
+The live authentication and response contract need integration verification.
+Provider metadata is reported without independent attestation.
 """
 
 from __future__ import annotations
 
+from copy import deepcopy
+from decimal import Decimal
 import json
 import os
 import urllib.request
@@ -29,13 +27,17 @@ class OAClient:
 
     def start(self, intent: str, jurisdiction: str) -> dict:
         if not self.live:
-            return _MOCK_START.get(jurisdiction.upper(), _MOCK_START["_DEFAULT"])
+            return deepcopy(_MOCK_START.get(jurisdiction.upper(), _MOCK_START["_DEFAULT"]))
         return self._call("start", {"intent": intent, "jurisdiction": jurisdiction})
 
     def get_skill(self, slug: str) -> dict:
         if not self.live:
-            return _MOCK_SKILL.get(slug, _MOCK_SKILL["_DEFAULT"])
-        return self._call("get_skill", {"slug": slug})
+            result = deepcopy(_MOCK_SKILL.get(slug, _MOCK_SKILL["_DEFAULT"]))
+        else:
+            result = self._call("get_skill", {"slug": slug})
+        if not isinstance(result, dict):
+            raise ValueError("get_skill must return an object")
+        return {**result, "provenance": "provider-reported" if self.live else "sample"}
 
     def _call(self, tool: str, arguments: dict) -> dict:
         self._id += 1
@@ -47,19 +49,35 @@ class OAClient:
         req = urllib.request.Request(self.url, data=body, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                payload = json.load(resp)
+                payload = json.load(resp, parse_float=Decimal)
         except urllib.error.HTTPError as e:
-            raise RuntimeError(f"OA MCP HTTP {e.code}: {e.read().decode()[:300]}") from e
-        if "error" in payload and payload["error"]:
-            raise RuntimeError(f"OA MCP error: {payload['error']}")
-        result = payload.get("result", {})
-        if isinstance(result.get("structuredContent"), (dict, list)):
+            raise RuntimeError(f"OA MCP HTTP {e.code}") from e
+        if not isinstance(payload, dict):
+            raise ValueError("OA MCP response must be an object")
+        if payload.get("jsonrpc") != "2.0" or type(payload.get("id")) is not int or payload["id"] != self._id:
+            raise ValueError("OA MCP response version or request ID does not match")
+        if "error" in payload:
+            raise RuntimeError("OA MCP returned an error")
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            raise ValueError("OA MCP result must be an object")
+        if "isError" in result and not isinstance(result["isError"], bool):
+            raise ValueError("OA MCP isError must be a Boolean")
+        if result.get("isError"):
+            raise RuntimeError("OA MCP tool returned an error")
+        if "structuredContent" in result:
+            if not isinstance(result["structuredContent"], dict):
+                raise ValueError("OA MCP structuredContent must be an object")
             return result["structuredContent"]
-        return json.loads((result.get("content") or [{}])[0].get("text", "{}"))
+        content = result.get("content")
+        if not isinstance(content, list) or not content or not isinstance(content[0], dict):
+            raise ValueError("OA MCP content must contain a text object")
+        if content[0].get("type") != "text" or not isinstance(content[0].get("text"), str):
+            raise ValueError("OA MCP content must contain a text string")
+        return json.loads(content[0]["text"], parse_float=Decimal)
 
 
-# --- Bundled sample responses (mirror live MCP shape) ----------------------
-# Verifier is the real OpenAccountants US lead. Live, every value comes from get_skill.
+# Bundled illustrative responses have no professional attestation.
 
 _MOCK_START = {
     "US": {"jurisdiction": "US", "skills_to_load": ["us-sales-tax-rates"],
@@ -71,24 +89,23 @@ _MOCK_START = {
 _MOCK_SKILL = {
     "us-sales-tax-rates": {
         "slug": "us-sales-tax-rates",
-        "name": "US destination sales-tax rates (state + local)",
-        "jurisdiction": "US", "tier": 1, "verifier": "Amir Pelinkovic (US lead)",
+        "name": "Illustrative US destination rates",
+        "jurisdiction": "US", "tier": None, "verifier": None,
         "rules": {
-            # Combined (state + county + city) rates by destination — the thing flat
-            # region rates can't do. Illustrative; production reads these from the skill.
+            "schema": "illustrative-rates-v1",
+            "rate_unit": "fraction",
+            "snapshot": "Illustrative comparison, reviewed 26 September 2026; not a current-rate service",
             "combined_rates": {
-                "IL/Chicago": 0.1025,
-                "CA/Los Angeles": 0.095,
-                "TX/Austin": 0.0825,
-                "OR/Portland": 0.0,
+                "IL/Chicago": "0.1025",
+                "CA/Los Angeles": "0.0975",
+                "TX/Austin": "0.0825",
+                "OR/Portland": "0",
             },
-            "state_base": {"IL": 0.0625, "CA": 0.0725, "TX": 0.0625, "CO": 0.029},
-            "no_tax_states": ["OR", "MT", "NH", "DE", "AK"],
-            "nexus_states": ["IL", "CA", "TX"],   # where the seller is registered/obligated
+            "sources": {"CA/Los Angeles": "https://cdtfa.ca.gov/taxes-and-fees/rates.aspx"},
         },
         "source": "https://www.openaccountants.com/skills/us-sales-tax-rates",
     },
     "_DEFAULT": {"slug": "us-sales-tax-rates", "name": "US sales-tax rates",
-                 "jurisdiction": "US", "tier": 2, "verifier": None, "rules": {},
+                 "jurisdiction": "US", "tier": None, "verifier": None, "rules": {},
                  "source": "https://www.openaccountants.com/skills"},
 }
