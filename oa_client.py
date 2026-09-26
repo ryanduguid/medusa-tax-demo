@@ -17,6 +17,10 @@ MCP_URL = os.environ.get("OA_MCP_URL", "https://www.openaccountants.com/api/mcp"
 MCP_TOKEN = os.environ.get("OA_MCP_TOKEN")
 
 
+def reject_json_constant(value):
+    raise ValueError("non-standard JSON numeric constant")
+
+
 class OAClient:
     def __init__(self, token: str | None = MCP_TOKEN, url: str = MCP_URL):
         self.token, self.url, self._id = token, url, 0
@@ -49,7 +53,7 @@ class OAClient:
         req = urllib.request.Request(self.url, data=body, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                payload = json.load(resp, parse_float=Decimal)
+                payload = json.load(resp, parse_float=Decimal, parse_constant=reject_json_constant)
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal in OA response") from error
         except urllib.error.HTTPError as e:
@@ -77,7 +81,7 @@ class OAClient:
         if content[0].get("type") != "text" or not isinstance(content[0].get("text"), str):
             raise ValueError("OA MCP content must contain a text string")
         try:
-            return json.loads(content[0]["text"], parse_float=Decimal)
+            return json.loads(content[0]["text"], parse_float=Decimal, parse_constant=reject_json_constant)
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal in OA response") from error
 

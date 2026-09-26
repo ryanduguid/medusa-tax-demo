@@ -39,6 +39,17 @@ class AdapterTests(unittest.TestCase):
             with self.subTest(payload=payload), self.assertRaisesRegex(ValueError, "invalid JSON decimal"):
                 self.call(payload)
 
+    def test_nonstandard_json_constants_are_rejected_even_in_metadata(self):
+        for constant in ("NaN", "Infinity", "-Infinity"):
+            skill = '{"tier":' + constant + ',"rules":{}}'
+            responses = [
+                '{"jsonrpc":"2.0","id":1,"result":{"structuredContent":' + skill + '}}',
+                json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": skill}]}}),
+            ]
+            for payload in responses:
+                with self.subTest(constant=constant, payload=payload), self.assertRaisesRegex(ValueError, "non-standard JSON"):
+                    self.call(payload)
+
     def test_tool_errors_do_not_supply_successful_data(self):
         payload = {"jsonrpc": "2.0", "id": 1, "result": {"isError": True, "structuredContent": {"value": 0}}}
         with self.assertRaisesRegex(RuntimeError, "tool returned an error"):

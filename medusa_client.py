@@ -6,10 +6,14 @@ from decimal import Decimal, InvalidOperation, localcontext
 from values import number, rate
 
 
+def reject_json_constant(value):
+    raise ValueError("non-standard JSON numeric constant")
+
+
 def extract(source: str) -> list[dict]:
     with open(source, encoding="utf-8") as fh:
         try:
-            data = json.load(fh, parse_float=Decimal)
+            data = json.load(fh, parse_float=Decimal, parse_constant=reject_json_constant)
         except InvalidOperation as error:
             raise ValueError("invalid JSON decimal literal") from error
     if data == []:

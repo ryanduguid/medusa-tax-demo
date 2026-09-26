@@ -14,6 +14,9 @@ os.environ["ETHERSCAN_API_KEY"] = ""
 class CommandLineTests(unittest.TestCase):
     def test_invalid_and_empty_files_return_a_diagnostic_without_a_traceback(self):
         cases = [("[]", "at least one record"),
+                 ('{"value":NaN}', "non-standard JSON"),
+                 ('{"value":Infinity}', "non-standard JSON"),
+                 ('{"value":-Infinity}', "non-standard JSON"),
                  ('{"value":1e999999999999999999999}', "invalid JSON decimal")]
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "invalid.json"
