@@ -1,5 +1,9 @@
 # Medusa → OpenAccountants: illustrative rate comparison
 
+**Fork status**
+
+[![Fork code quality](https://app.codacy.com/project/badge/Grade/6d8f13387aeb47c9a055a127bb9eee61?branch=main)](https://app.codacy.com/gh/ryanduguid/medusa-tax-demo/dashboard)
+
 Compare a supplied region rate with a small table of illustrative destination
 rates. The Python example reads simplified cart JSON and prints the difference.
 It is not a Medusa Tax Module Provider and does not determine the tax a seller
