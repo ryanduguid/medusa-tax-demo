@@ -1,16 +1,18 @@
 # Medusa → OpenAccountants: tax-provider demo
 
-**The pitch in one line:** Medusa is open-source commerce whose own docs say its tax engine "won't work for the US or varying rates within the same region." OpenAccountants is the **drop-in tax provider** that returns the destination-correct rate — state + local — signed off by a named licensed accountant.
+Demonstrates destination-rate comparisons on Medusa-shaped carts using OpenAccountants sample rates, with an optional live MCP connection.
+
+Default runs use bundled sample responses. Their rates, verdicts and reviewer labels are illustrative fixtures, not evidence that an accountant reviewed the demo or a live Guide. For live use, check the fetched Guide's review status, reviewer, version and review date against the [review method](https://www.openaccountants.com/review-method). A jurisdiction lead's name alone does not establish review. Have a qualified professional review outputs before filing or acting on them.
 
 ```
 Medusa cart (items + shipping address)
   └─ POST /store/carts/:id/taxes  →  OpenAccountants tax provider
-        └─ OA MCP: load the verified US destination rates
+        └─ OA MCP: load the US destination rates
               └─ Verdict:  ⚠️ under-charging — flat region rate misses local tax   ← the catch
                            ⚠️ over-charging — no sales tax in this state
                            ✅ correct destination rate
                  · Medusa flat rate vs OA rate, side by side
-                 · the named CPA who signed off the rates
+                 · the Guide version's published review record, if present
 ```
 
 ![Medusa → OpenAccountants demo](demo.svg)
@@ -22,7 +24,7 @@ Medusa cart (items + shipping address)
 This is a **real integration target, not just a demo**: Medusa ([`medusajs/medusa`](https://github.com/medusajs/medusa), ~34k★, MIT) has a clean tax-provider seam, and its [docs explicitly state](https://docs.medusajs.com/) the built-in calculation "will not work for the US or other countries with varying rates within the same region." OpenAccountants slots straight into that seam and fills the gap they've documented.
 
 - **Medusa = the store, the cart, the checkout.**
-- **OpenAccountants = the tax provider** — destination-correct state + local rates, no-tax states, and nexus awareness, with verified rules a real accountant signed off on.
+- **OpenAccountants** supplies sample rates for destination-rate comparisons and illustrative nexus flags. Check the fetched Guide version's review record before relying on live rates.
 
 ## What it shows
 
@@ -49,7 +51,7 @@ python pipeline.py samples/carts.json
 ### Go live
 
 ```bash
-export OA_MCP_TOKEN=...     # OpenAccountants account token (uses the live verified rates)
+export OA_MCP_TOKEN=...     # OpenAccountants account token (uses live Guide content; check review status)
 python pipeline.py
 ```
 
@@ -68,5 +70,5 @@ To wire it into a real Medusa store, this becomes a Tax Module Provider whose
 
 ## Honest notes
 
-- `tax_provider.py` does **rate lookup + nexus signal**, not product taxability, exemptions, or marketplace-facilitator rules. Production leans on the full OA skill + an agent step; the named-CPA sign-off makes the rate relianceable.
-- Rates (Chicago 10.25%, LA 9.5%, Austin 8.25%, OR 0%) are real combined figures; live, every value comes from `get_skill`. The verifier (Amir Pelinkovic) is the real OpenAccountants US lead.
+- `tax_provider.py` does **rate lookup + nexus signal**, not product taxability, exemptions, or marketplace-facilitator rules. Production leans on the full OA skill + an agent step; professional review must be established for the specific Guide version and your facts.
+- Rates (Chicago 10.25%, LA 9.5%, Austin 8.25%, OR 0%) are real combined figures; the bundled reviewer label is illustrative. Inspect the actual `get_skill` response and its review record in live mode.
