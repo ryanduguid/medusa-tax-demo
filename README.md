@@ -1,8 +1,12 @@
 # Medusa → OpenAccountants: illustrative rate comparison
 
+<div align="center">
+
 **Fork status**
 
 [![Fork code quality](https://img.shields.io/codacy/grade/6d8f13387aeb47c9a055a127bb9eee61/main?style=flat&labelColor=000000)](https://app.codacy.com/gh/ryanduguid/medusa-tax-demo/dashboard)
+
+</div>
 
 Compare a supplied region rate with a small table of illustrative destination
 rates. The Python example reads simplified cart JSON and prints the difference.
