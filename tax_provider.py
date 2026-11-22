@@ -69,7 +69,7 @@ def check(cart: dict, oa_skill: dict) -> dict:
     detail = f"Illustrative tax difference: USD {delta:,.2f}. Assumes the entire subtotal is taxable."
     if sample_rate != region_rate and delta == 0:
         detail += " The rates differ but give the same rounded amount."
-    return {**base, "complete": True, "delta": delta,
+    return {**base, "complete": True,
             "status": "ok" if sample_rate == region_rate else "warn",
             "headline": f"Region rate {relation} the illustrative rate ({sample_rate:.2%})",
             "detail": detail}
